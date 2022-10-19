@@ -42,7 +42,7 @@ namespace CMDMenu
         public string CheckExit(string? input)
         {
             input ??= "";
-            if (stopWords.Contains(input.Trim())) throw new MessageException();
+            if (stopWords.Contains(input.Trim())) throw new MessageException("");
             return input;
         }
     }
