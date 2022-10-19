@@ -14,7 +14,7 @@ namespace Lesson5
         static int amountWordNumbersToPrint = 10;
 
         //I couldn't deside: use linq or not use linq, so I did both. This selects usage of it.
-        static bool linq = false;
+        static bool priorityQueue = false;
         static IComparer<int> mostComparer = Comparer<int>.Create((a, b) => Comparer<int>.Default.Compare(b, a));
         static Dictionary<string, string> numberReplaceDictionary = new Dictionary<string, string>
         {
@@ -31,6 +31,8 @@ namespace Lesson5
         };
 
 
+        //main functions
+
         //input from console that is stoped by writing /exit
         static void ReadFromConsole()
         {
@@ -45,7 +47,7 @@ namespace Lesson5
                     builder.AppendLine(checker.CheckExit(Console.ReadLine()));
                 }
             } catch (MessageException) {}
-            Text = builder.ToString();
+            Text = builder.ToString().TrimEnd();
             Console.WriteLine("=== Text saved ===");
         }
 
@@ -60,9 +62,10 @@ namespace Lesson5
             } catch (IOException e) { throw new MessageException("Error in reading file: " + e.Message); };
         }
 
+
         static void PrintText()
         {
-            if (Text == null) throw new MessageException("Text haven't been entered");
+            checkText();
             Console.WriteLine(Text);
         }
 
@@ -70,12 +73,12 @@ namespace Lesson5
         //Prints first [amountWordNumbersToPrint] words with most numbers in it
         static void FindMostNumbers()
         {
-            if (Text == null) throw new MessageException("Text haven't been entered");
+            checkText();
 
-            string[] words = splitCheckText(Text);
+            string[] words = splitCheckText(Text, splitToWords);
 
             Console.WriteLine("Words with most numbers are (from most):");
-            if (!linq)
+            if (priorityQueue)
             {
                 //Count numbers for every word and place it in priority queue,
                 PriorityQueue<string, int> countNumberWordList = new PriorityQueue<string, int>(mostComparer); //comparer need to make from most to least
@@ -96,23 +99,23 @@ namespace Lesson5
             } else
             {
                 //it self explanatory
-                words.OrderByDescending(e => e.Count(char.IsDigit))
+                enumerableCheckPrint(
+                    words.OrderByDescending(e => e.Count(char.IsDigit))
                     .Take(amountWordNumbersToPrint)
-                    .ToList()
-                    .ForEach(Console.WriteLine);
+                );
             }
         }
 
 
         static void FindLongestCount()
         {
-            if (Text == null) throw new MessageException("Text haven't been entered");
+            checkText();
 
-            string[] words = splitCheckText(Text);
+            string[] words = splitCheckText(Text, splitToWords);
             string? longest = null;
             int amount = 0;
             
-            if (!linq)
+            if (priorityQueue)
             {
 
                 PriorityQueue<string, int> countNumberWordList = new PriorityQueue<string, int>(mostComparer); //comparer need to make from most to least
@@ -136,7 +139,7 @@ namespace Lesson5
 
         public static void ReplaceNumbers()
         {
-            if (Text == null) throw new MessageException("Text haven't been entered");
+            checkText();
 
             //too easy
             string res = Text;
@@ -150,6 +153,82 @@ namespace Lesson5
         }
 
 
+        public static void PrintQuestionExclamationSentences()
+        {
+            checkText();
+            string[] sentences = splitCheckText(Text, splitToSentences);
+            printSentencesByCondition(sentences, sent => sent.EndsWith("?"));
+            printSentencesByCondition(sentences, sent => sent.EndsWith("!"));
+        }
+
+
+
+        public static void PrintNoCommaSentences()
+        {
+            checkText();
+            string[] sentences = splitCheckText(Text, splitToSentences);
+            printSentencesByCondition(sentences, sent => sent.All(ch => ch != ','));
+        }
+
+
+        public static void PrintFirstLastWords()
+        {
+            checkText();
+            string[] words = splitCheckText(Text, splitToWords);
+            enumerableCheckPrint(words.Where(word => word.First() == word.Last()));
+        }
+
+
+        //helper functions
+        private static void checkText()
+        {
+            if (Text == null) throw new MessageException("Text haven't been entered");
+        }
+
+
+        private static void enumerableCheckPrint(IEnumerable<string> e)
+        {
+            if (e.Count() == 0) Console.WriteLine("No such elements");
+            else
+            {
+                e.ToList().ForEach(Console.WriteLine);
+            } 
+        }
+
+
+        static void printSentencesByCondition(string[] sentences, Func<string, bool> condition)
+        {
+            enumerableCheckPrint(sentences.Where(condition));
+        }
+
+
+        private static string[] splitCheckText(string s, Func<string, string[]> splitFunction)
+        {
+            var words = splitFunction.Invoke(s);
+            if (words.Length == 0)
+            {
+                throw new MessageException("There are no words in text");
+            }
+            return words;
+        }
+
+
+        private static string[] splitToWords(string s)
+        {
+            return s.Split(new char[] {' ', '\t', '\n'}, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(e => new string(e.Where(Char.IsLetterOrDigit).ToArray())).ToArray();
+        }
+
+
+        private static string[] splitToSentences(string s)
+        {
+            return s.Replace(".",".\b").Replace("!","!\b").Replace("?","?\b")
+                .Split('\b', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
+        }
+
+        
+
+        //just main
         public static void Main(string[] args)
         {
             handler.RegisterCommand(new string[] { "read", "read console" }, ReadFromConsole, "Reads file from console");
@@ -158,26 +237,15 @@ namespace Lesson5
             handler.RegisterCommand("most numbers", FindMostNumbers, $"Prints first {amountWordNumbersToPrint} of words with most numbers in it from most to less");
             handler.RegisterCommand("longest", FindLongestCount, $"Prints longest word and how much it appears in text");
             handler.RegisterCommand("replace numbers", ReplaceNumbers, $"Prints longest word and how much it appears in text");
-            handler.RegisterCommand("switch", () => { linq = !linq; Console.WriteLine($"Linq { (linq ? "on":"off") }"); }, "Switches realization of methods (use linq or not)");
+            handler.RegisterCommand(new string[] { "question", "exclamation", "question exclamation", "exclamation question" },
+                PrintQuestionExclamationSentences, $"Prints question sentences then exclamation sentenses");
+            handler.RegisterCommand("no commas", PrintNoCommaSentences, $"Prints sentences without commas");
+            handler.RegisterCommand("begin end", PrintFirstLastWords, $"Prints words which begins and ends with same letter");
+            handler.RegisterCommand("switch", () => { priorityQueue = !priorityQueue; Console.WriteLine($"Priority queues {(priorityQueue ? "on" : "off")}"); }, "Switches realization of methods in most numbers and longest (use linq or not)");
 
 
             handler.PrintHelp();
             handler.Run();
-        }
-
-        private static string[] splitCheckText(string s)
-        {
-            var words = splitToWords(s);
-            if (words.Length == 0)
-            {
-                throw new MessageException("There are no words in text");
-            }
-            return words;
-        }
-        private static string[] splitToWords(string s)
-        {
-            return s.Split().Where(e => !String.IsNullOrWhiteSpace(e))
-                .Select(e => new string(e.Where(Char.IsLetterOrDigit).ToArray())).ToArray();
         }
     }
 }
