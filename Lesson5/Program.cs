@@ -59,6 +59,7 @@ namespace Lesson5
             try
             {
                 Text = File.ReadAllText(filePath);
+                Console.WriteLine("Text has been imported from file");
             } catch (IOException e) { throw new MessageException("Error in reading file: " + e.Message); };
         }
 
