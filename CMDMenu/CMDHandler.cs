@@ -10,42 +10,6 @@ using System.Threading.Tasks;
 
 namespace CMDMenu
 {
-    //exception class that should be placed in functions with
-    //the purpose to print the message and await new command
-    public class MessageException : Exception
-    {
-        public MessageException(){}
-        public MessageException(string? message) : base(message){}
-        public MessageException(string? message, Exception? innerException) : base(message, innerException){}
-    }
-
-    /* Helper class that checks is string exit command and throws MessageException if it is
-     * Intended for use in functions registered in handler
-     */
-    public class ExitChecker
-    {
-        public static readonly ExitChecker Default = new ExitChecker();
-
-        public ExitChecker() : this(new string[] { "stop", "exit", "quit" }) { }
-        public ExitChecker(IEnumerable<string> stopWords) //for custom exit words
-        {
-            this.stopWords.AddRange(stopWords);
-        }
-        private List<string> stopWords = new List<string>();
-        
-        //Shortcut for ExitChecker.Default.CheckExit(...)
-        public static string Check(string? input)
-        {
-            return Default.CheckExit(input);
-        }
-
-        public string CheckExit(string? input)
-        {
-            input ??= "";
-            if (stopWords.Contains(input.Trim())) throw new MessageException("");
-            return input;
-        }
-    }
 
     /* Class designed to provide a console interface with enterable commands
      * It implements default exit and help behavior and exception interception
@@ -68,9 +32,9 @@ namespace CMDMenu
         //description shown in help
         public string? Description = null;
 
-        private void regByStrArr(string[]? c, Action a, string d)
+        private void regByStrArr(string[]? command, Action action, string description)
         {
-            if (c != null && c.Length > 0) RegisterCommand(c, a, d);
+            if (command != null && command.Length > 0) RegisterCommand(command, action, description);
         }
         public CMDHandler() : this(new string[] { "quit", "exit" }, new string[] { "help" }) { }
         //Creates CMDHandler with predefined help and quit commands/
@@ -99,7 +63,7 @@ namespace CMDMenu
                 {
                     if (_commands.TryGetValue(inputCommand, out var action))
                     {
-                        action.Item1();
+                        action.Item1.Invoke();
                     }
                     else
                     { handleNoCommand(inputCommand); }
